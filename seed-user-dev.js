@@ -1,6 +1,7 @@
 const Database = require("better-sqlite3");
 const crypto = require("crypto");
-const db = new Database("practice.db");
+const dbPath = process.env.DB_PATH || "practice.db";
+const db = new Database(dbPath);
 
 console.log("Seeding database for user: practicepal-dev");
 
