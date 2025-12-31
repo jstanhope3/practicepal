@@ -1,65 +1,208 @@
-import Image from "next/image";
+import db from "@/lib/db";
+import { revalidatePath } from "next/cache";
+import ConceptPieChart from "@/app/components/ConceptPieChart";
+import RepertoirePieChart from "@/app/components/RepertoirePieChart";
+import DateFilter from "@/app/components/DateFilter";
+import Card from "@/app/components/Card";
+import { cookies } from "next/headers";
 
-export default function Home() {
+type Props = {
+  searchParams: Promise<{ range?: string }>;
+};
+
+export default async function Dashboard(props: Props) {
+  const cookie = await cookies();
+  const userId = cookie.get("user_id")?.value;
+
+  const searchParams = await props.searchParams;
+  const range = searchParams.range || "7";
+
+  const dateFilter =
+    range !== "all"
+      ? `AND logs.timestamp >= datetime('now', '-${range} days')`
+      : "";
+
+  // 1. Fetch Concepts for the dropdown
+  const concepts = db
+    .prepare(
+      `
+      SELECT
+        *
+      FROM
+        concepts
+      WHERE concepts.user_id = ?
+      ORDER BY name ASC
+    `,
+    )
+    .all(userId) as any[];
+
+  const repertoire = db
+    .prepare(
+      "SELECT * FROM repertoire WHERE repertoire.user_id = ? ORDER BY name ASC",
+    )
+    .all(userId) as any[];
+
+  // 2. Fetch Basic Stats (Total minutes practiced)
+  // We use "coalesce" to ensure we return 0 if the sum is null
+  const stats = db
+    .prepare(
+      `
+    SELECT
+      count(*) as recorded_sessions,
+      coalesce(sum(duration), 0) as total_minutes
+    FROM logs
+    WHERE logs.user_id = ? ${dateFilter}
+  `,
+    )
+    .get(userId) as any;
+
+  const chartData = db
+    .prepare(
+      `
+      SELECT
+        COALESCE(concepts.name, 'No Concept') as name,
+        COALESCE(concepts.category, 'Unspecified') as category,
+        SUM(logs.duration) as value
+      FROM logs
+      JOIN concepts ON logs.concept_id = concepts.id
+      WHERE logs.user_id = ? ${dateFilter}
+      GROUP BY concepts.name, concepts.category
+      ORDER BY value DESC
+    `,
+    )
+    .all(userId);
+
+  const pieceData = db
+    .prepare(
+      `
+      SELECT
+        COALESCE(repertoire.name, 'No Concept') as name,
+        SUM(logs.duration) as value
+      FROM logs
+      JOIN repertoire ON logs.repertoire_id = repertoire.id
+      WHERE logs.user_id = ? ${dateFilter}
+      GROUP BY repertoire.name
+      ORDER BY value DESC
+    `,
+    )
+    .all(userId);
+
+  async function logSession(formData: FormData) {
+    "use server";
+    const cookie = await cookies();
+    const rawConcept = formData.get("concept_id");
+    const conceptId = rawConcept ? rawConcept : null;
+    const rawRepertoire = formData.get("repertoire_id");
+    const repertoireId = rawRepertoire ? rawRepertoire : null;
+    const duration = formData.get("duration");
+    const notes = formData.get("notes");
+    const user_id = cookie.get("user_id")?.value;
+
+    const stmt = db.prepare(
+      "INSERT INTO logs (user_id, concept_id, repertoire_id, duration, notes ) VALUES (?, ?, ?, ?, ?)",
+    );
+    stmt.run(user_id, conceptId, repertoireId, duration, notes);
+    revalidatePath("/");
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="bg-practicepal-100 max-w-6xl mx-auto p-6 space-y-8">
+      {/* STATS CARDS */}
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row justify-between items-end border-b border-gray-200 pb-6">
+        <div>
+          <h1 className="text-3xl font-extrabold text-practicepal-400">
+            Dashboard
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+          {/*<p className="text-slate-500 mt-1">
+            Welcome back. Let's make some music.
+          </p>*/}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        <DateFilter />
+      </div>
+
+      {/* HERO STATS ROW */}
+
+      {/* Card for the Chart */}
+      <div className="grid md:grid-cols-2">
+        <div className="bg-practicepal-100 p-6 rounded-xl shadow-sm border">
+          <h3 className="text-lg font-bold text-practicepal-400 mb-4">
+            Practice Time per Concept
+          </h3>
+          {/* PASS THE DATA PROP HERE */}
+          <ConceptPieChart data={chartData} />
+        </div>
+        <div className="bg-practicepal-100 p-6 rounded-xl shadow-sm border">
+          <h3 className="text-lg font-bold text-practicepal-400 mb-4">
+            Practice Time per Piece
+          </h3>
+          {/* PASS THE DATA PROP HERE */}
+          <RepertoirePieChart data={pieceData} />
+        </div>
+      </div>
+
+      {/* QUICK LOG FORM */}
+      <section className="bg-practicepal-100 p-6 rounded-xl shadow-sm border">
+        <h2 className="text-xl font-bold mb-4 text-gray-800">Record Session</h2>
+        <form action={logSession} className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Concept</label>
+              <select
+                name="concept_id"
+                className="w-full p-2 border rounded bg-white"
+              >
+                <option value="">None</option>
+                {concepts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Repertoire
+              </label>
+              <select
+                name="repertoire_id"
+                className="w-full p-2 border rounded bg-white"
+              >
+                <option value="">None</option>
+                {repertoire.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Duration (min)
+              </label>
+              <input
+                name="duration"
+                type="number"
+                placeholder="30"
+                className="w-full p-2 border rounded"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Notes</label>
+            <input
+              name="notes"
+              type="text"
+              placeholder="Brief notes..."
+              className="w-full p-2 border rounded"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </div>
+          <button className="bg-practicepal-200 text-pra px-6 py-2 rounded font-bold hover:bg-practicepal-500 w-full md:w-auto">
+            Log Session
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }
