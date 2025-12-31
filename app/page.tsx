@@ -22,7 +22,6 @@ export default async function Dashboard(props: Props) {
       ? `AND logs.timestamp >= datetime('now', '-${range} days')`
       : "";
 
-  // 1. Fetch Concepts for the dropdown
   const concepts = db
     .prepare(
       `
@@ -41,9 +40,6 @@ export default async function Dashboard(props: Props) {
       "SELECT * FROM repertoire WHERE repertoire.user_id = ? ORDER BY name ASC",
     )
     .all(userId) as any[];
-
-  // 2. Fetch Basic Stats (Total minutes practiced)
-  // We use "coalesce" to ensure we return 0 if the sum is null
   const stats = db
     .prepare(
       `
@@ -107,41 +103,31 @@ export default async function Dashboard(props: Props) {
 
   return (
     <main className="bg-practicepal-100 max-w-6xl mx-auto p-6 space-y-8">
-      {/* STATS CARDS */}
-      {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row justify-between items-end border-b border-gray-200 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-practicepal-400">
             Dashboard
           </h1>
-          {/*<p className="text-slate-500 mt-1">
-            Welcome back. Let's make some music.
-          </p>*/}
         </div>
         <DateFilter />
       </div>
-
-      {/* HERO STATS ROW */}
-
-      {/* Card for the Chart */}
       <div className="grid md:grid-cols-2">
         <div className="bg-practicepal-100 p-6 rounded-xl shadow-sm border">
           <h3 className="text-lg font-bold text-practicepal-400 mb-4">
             Practice Time per Concept
           </h3>
-          {/* PASS THE DATA PROP HERE */}
+
           <ConceptPieChart data={chartData} />
         </div>
         <div className="bg-practicepal-100 p-6 rounded-xl shadow-sm border">
           <h3 className="text-lg font-bold text-practicepal-400 mb-4">
             Practice Time per Piece
           </h3>
-          {/* PASS THE DATA PROP HERE */}
+
           <RepertoirePieChart data={pieceData} />
         </div>
       </div>
 
-      {/* QUICK LOG FORM */}
       <section className="bg-practicepal-100 p-6 rounded-xl shadow-sm border">
         <h2 className="text-xl font-bold mb-4 text-gray-800">Record Session</h2>
         <form action={logSession} className="space-y-4">

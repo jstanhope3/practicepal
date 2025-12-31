@@ -1,5 +1,5 @@
 const Database = require("better-sqlite3");
-const crypto = require("crypto"); // Needed to hash the username
+const crypto = require("crypto");
 const db = new Database("practice.db");
 
 console.log("Seeding database for user: practicepal-dev");
@@ -51,7 +51,7 @@ const repMap = [];
 repertoire.forEach((r) => {
   console.log(userId, r.name, r.composer, r.genre);
   const info = insertRep.run(userId, r.name, r.composer, r.genre);
-  repMap.push(info.lastInsertRowid); // Store the new ID
+  repMap.push(info.lastInsertRowid);
 });
 
 const insertLog = db.prepare(`
@@ -65,7 +65,7 @@ const randomInt = (min, max) =>
 
 function randomDate() {
   const date = new Date();
-  date.setDate(date.getDate() - randomInt(0, 180)); // 0-6 months back
+  date.setDate(date.getDate() - randomInt(0, 180));
   return date.toISOString();
 }
 

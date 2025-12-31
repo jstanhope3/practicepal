@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "@/app/globals.css";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { logout } from "@/app/actions/auth"; // Import the action
+import { logout } from "@/app/actions/auth";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,7 +29,7 @@ export default async function RootLayout({
             <Link href="/" className="font-bold text-xl">
               🎹 PracticePal
             </Link>
-            {/* Links & Logout (Only visible if logged in) */}
+
             {isLoggedIn && (
               <div className="flex items-center gap-6">
                 <div className="hidden md:flex gap-6">
@@ -38,7 +38,6 @@ export default async function RootLayout({
                   <NavLink href="/logs" label="Logs" />
                 </div>
 
-                {/* LOGOUT BUTTON */}
                 <form action={logout}>
                   <button className="bg-practicepal-200 hover:bg-practicepal-500 text-practicepal-400 hover:text-practicepal-400 text-xs font-bold py-2 px-4 rounded border border-slate-700 transition-all">
                     Log Out
@@ -49,14 +48,12 @@ export default async function RootLayout({
           </div>
         </nav>
 
-        {/* PAGE CONTENT INJECTED HERE */}
         {children}
       </body>
     </html>
   );
 }
 
-// Helper for clean links
 function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
