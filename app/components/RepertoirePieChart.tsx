@@ -26,7 +26,7 @@ export default function RepertoirePieChart({ data }: { data: any[] }) {
             outerRadius={100}
             stroke="#fff"
             strokeWidth={1}
-            label={({ name, percent }) => (percent > 0.05 ? name : "")}
+            label={({ name, percent }) => (percent || 0.0 > 0.05 ? name : "")}
           >
             {data.map((entry, index) => (
               <Cell
@@ -38,7 +38,7 @@ export default function RepertoirePieChart({ data }: { data: any[] }) {
           </Pie>
 
           <Tooltip
-            formatter={(value: number, name: string, props: any) => {
+            formatter={(value: any, name: any, props: any) => {
               return [`${value} min`, `${name}`];
             }}
           />
