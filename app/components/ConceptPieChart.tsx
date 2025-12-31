@@ -97,7 +97,7 @@ export default function ConceptPieChart({ data }: { data: any[] }) {
           </Pie>
 
           <Tooltip
-            formatter={(value: number, name: string, props: any) => {
+            formatter={(value: any, name: string, props: any) => {
               return [`${value} min`, `${name}`];
             }}
           />
