@@ -28,7 +28,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 COPY --from=builder --chown=nextjs:nodejs /app/setup-db.js ./
-COPY --from=builder --chown=nextjs:nodejs /app/seed-dev-user.js ./
+COPY --from=builder --chown=nextjs:nodejs /app/seed-user-dev.js ./
 
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
