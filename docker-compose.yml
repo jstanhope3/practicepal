@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  app:
+    container_name: practice-buddy-app
+    build: .
+    restart: always
+    environment:
+      - DB_PATH=/app/data/practice.db
+      - PORT=3000
+    volumes:
+      - practice_data:/app/data
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy-server
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  practice_data:
+  caddy_data:
+  caddy_config:
