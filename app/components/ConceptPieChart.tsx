@@ -88,7 +88,7 @@ export default function ConceptPieChart({ data }: { data: any[] }) {
             stroke="#fff"
             strokeWidth={2}
             label={
-              ({ name, percent }) => (percent > 0.05 ? name : "") // Only label big slices
+              ({ name, percent }) => (percent || 0.0 > 0.05 ? name : "") // Only label big slices
             }
           >
             {categoryPieData.map((entry, index) => (
